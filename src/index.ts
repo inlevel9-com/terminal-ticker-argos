@@ -6,6 +6,7 @@ import { login, logout } from './auth.js'
 import * as cmd from './commands.js'
 import { loadConfig, type Lang } from './config.js'
 import { CHART_RANGES, type ChartRange } from './schema.js'
+import { updateCheckEnabled, updateNotice } from './update-check.js'
 
 const { version } = createRequire(import.meta.url)('../package.json') as { version: string }
 
@@ -38,6 +39,9 @@ process.stdout.on('error', (err: NodeJS.ErrnoException) => {
   throw err
 })
 
+// Language for error messages printed after main() fails; set once flags are parsed.
+let messageLang: Lang = loadConfig().lang
+
 async function main(): Promise<void> {
   const { values: v, positionals } = parseArgs({
     allowPositionals: true,
@@ -68,6 +72,7 @@ async function main(): Promise<void> {
 
   const config = loadConfig()
   const lang: Lang = v.lang === 'ko' || v.lang === 'en' ? v.lang : config.lang
+  messageLang = lang
   const range = (CHART_RANGES as readonly string[]).includes(String(v.range).toUpperCase())
     ? (String(v.range).toUpperCase() as ChartRange) : config.range
   const flags: cmd.Flags = {
@@ -116,8 +121,16 @@ function usage(message: string): void {
   process.exitCode = 2
 }
 
-main().catch((err: unknown) => {
-  const lang = loadConfig().lang
-  process.stderr.write(`argos: ${errorMessage(err, lang)}\n`)
-  process.exitCode = 1
-})
+main()
+  .catch((err: unknown) => {
+    process.stderr.write(`argos: ${errorMessage(err, messageLang)}\n`)
+    process.exitCode = 1
+  })
+  .then(async () => {
+    const argv = process.argv.slice(2)
+    // Skip for the TUI (no command): it exits through the alternate screen, which would swallow the line.
+    const hasCommand = argv.some((a) => !a.startsWith('-'))
+    if (!hasCommand || !updateCheckEnabled(argv.includes('--json')) || argv.includes('-v') || argv.includes('--version')) return
+    const notice = await updateNotice(version, messageLang).catch(() => null)
+    if (notice) process.stderr.write(`\n${notice}\n`)
+  })

@@ -10,7 +10,7 @@ const DIR = process.env.ARGOS_CONFIG_DIR
 
 export type Lang = 'ko' | 'en'
 export type Config = { lang: Lang; range: ChartRange; ascii: boolean }
-export type State = { lastDigestAt?: string }
+export type State = { lastDigestAt?: string; lastUpdateCheck?: string; latestVersion?: string }
 export type Credentials = { token: string; email: string | null }
 
 function readJson<T>(name: string): Partial<T> {
