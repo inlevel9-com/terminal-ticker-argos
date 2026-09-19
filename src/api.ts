@@ -13,6 +13,7 @@ type Options = {
   query?: Record<string, string | number | boolean | null | undefined>
   body?: unknown
   token?: string | null
+  timeoutMs?: number
 }
 
 async function request<T extends z.ZodType>(schema: T, path: string, opts: Options = {}): Promise<z.infer<T>> {
@@ -31,7 +32,7 @@ async function request<T extends z.ZodType>(schema: T, path: string, opts: Optio
         ...(opts.token ? { authorization: `Bearer ${opts.token}` } : {}),
       },
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(opts.timeoutMs ?? 20_000),
     })
   } catch {
     throw new ApiError(0, 'network_error')
@@ -59,7 +60,8 @@ export const api = {
   history: (ticker: string, range: S.ChartRange) =>
     request(S.History, `/api/symbol/${encodeURIComponent(ticker)}/history`, { query: { range } }),
   aiBrief: async (ticker: string): Promise<S.Brief> => {
-    const r = await request(S.AiBrief, `/api/symbol/${encodeURIComponent(ticker)}/ai`)
+    // Generated on first request (cached server-side afterwards), so allow longer.
+    const r = await request(S.AiBrief, `/api/symbol/${encodeURIComponent(ticker)}/ai`, { timeoutMs: 60_000 })
     return { summary: r.brief.summary_text, highlights: r.brief.highlights, updated_at: '', checkpoints: r.brief.next_checkpoints ?? [] }
   },
   // Stored brief when there is one, otherwise the web's on-demand brief.
