@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // Tiny request cache shared by every pane: one in-flight promise per key, and
 // the settled value kept for the session (TTL-bounded) so moving the cursor
@@ -29,12 +29,17 @@ export function useAsync<T>(key: string | null, fetcher: () => Promise<T>, nonce
   const [state, setState] = useState<Async<T>>(() => ({
     data: key ? peek<T>(key) : undefined, error: undefined, loading: key != null && peek<T>(key) === undefined,
   }))
+  // Bypass the cache only on the render where `nonce` changed (the user pressed
+  // r), not on every later key change.
+  const seenNonce = useRef(nonce)
   useEffect(() => {
     if (!key) { setState({ data: undefined, error: undefined, loading: false }); return }
     let live = true
-    const cached = peek<T>(key)
+    const force = nonce !== seenNonce.current
+    seenNonce.current = nonce
+    const cached = force ? undefined : peek<T>(key)
     setState({ data: cached, error: undefined, loading: cached === undefined })
-    load(key, fetcher, nonce > 0).then(
+    load(key, fetcher, force).then(
       (data) => live && setState({ data, error: undefined, loading: false }),
       (error) => live && setState({ data: undefined, error, loading: false }),
     )

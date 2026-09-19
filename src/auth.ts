@@ -1,13 +1,17 @@
 import { hostname } from 'node:os'
 import { spawn } from 'node:child_process'
 import { api } from './api.js'
-import { clearCredentials, loadCredentials, saveCredentials, type Lang } from './config.js'
+import { API_URL, clearCredentials, loadCredentials, saveCredentials, type Lang } from './config.js'
+import { isTrustedUrl } from './sanitize.js'
 
-// Returns false when it didn't try (SSH, BROWSER=none); the caller prints the URL either way.
+// Opens only URLs on the ARGOS site. Returns false when it didn't try (SSH,
+// BROWSER=none, untrusted URL); the caller prints the URL either way.
 export function openUrl(url: string): boolean {
   if (process.env.SSH_CONNECTION || process.env.BROWSER === 'none' || process.env.ARGOS_NO_BROWSER) return false
-  const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'cmd' : 'xdg-open'
-  const args = process.platform === 'win32' ? ['/c', 'start', '', url] : [url]
+  if (!isTrustedUrl(url, API_URL)) return false
+  // Windows: rundll32 rather than `cmd /c start`, which would parse & and ^ in the URL.
+  const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'rundll32' : 'xdg-open'
+  const args = process.platform === 'win32' ? ['url.dll,FileProtocolHandler', url] : [url]
   try {
     spawn(cmd, args, { stdio: 'ignore', detached: true }).on('error', () => {}).unref()
     return true

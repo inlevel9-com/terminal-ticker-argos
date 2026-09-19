@@ -51,6 +51,12 @@ export function App({ config }: { config: Config }) {
   const [range, setRange] = useState<ChartRange>(config.range)
   const [nonce, setNonce] = useState(0)
   const [status, setStatus] = useState<string>('')
+  // Transient notices fade after a few seconds; the sign-in hint stays.
+  useEffect(() => {
+    if (!status || !token) return
+    const id = setTimeout(() => setStatus(''), 5000)
+    return () => clearTimeout(id)
+  }, [status, token])
   const [quotes, setQuotes] = useState<Record<string, number | null>>({})
   const [fresh, setFresh] = useState<Record<string, number>>({})
   const [briefScroll, setBriefScroll] = useState(0)
@@ -303,7 +309,8 @@ function SymbolPane({ ticker, range, lang, ascii, width, height, nonce }: {
   const rangeCh = changes(hist.data ?? null).range
   const gap = targetGap(s?.consensus?.target_mean, ch.last, s?.consensus?.target_gap_pct)
   const narrow = width < 60
-  const chartRows = Math.max(3, height - (narrow ? 18 : 10))
+  // Header 1 + chart margins 2 + events/consensus 7 + brief hint 2 = 12 rows of chrome.
+  const chartRows = Math.max(3, height - (narrow ? 19 : 12))
   const eventsW = narrow ? width : Math.floor(width * 0.6)
   const consW = narrow ? width : width - eventsW - 3
 

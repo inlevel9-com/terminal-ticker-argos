@@ -1,6 +1,7 @@
 import type { z } from 'zod'
 import { API_URL, type Lang } from './config.js'
 import * as S from './schema.js'
+import { sanitizeDeep } from './sanitize.js'
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string, public detail: Record<string, unknown> = {}) {
@@ -41,7 +42,7 @@ async function request<T extends z.ZodType>(schema: T, path: string, opts: Optio
   if (!res.ok) throw new ApiError(res.status, typeof json?.error === 'string' ? json.error : `http_${res.status}`, json ?? {})
   const parsed = schema.safeParse(json)
   if (!parsed.success) throw new ApiError(res.status, 'unexpected_response')
-  return parsed.data
+  return sanitizeDeep(parsed.data)
 }
 
 export const api = {
