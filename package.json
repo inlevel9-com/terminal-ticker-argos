@@ -1,0 +1,59 @@
+{
+  "name": "@inlevel9/argos",
+  "version": "0.1.0",
+  "description": "ARGOS in your terminal — filings, earnings surprises, consensus gaps, sector fear & greed, and AI briefs for global listed companies.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "argos": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.ko.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "homepage": "https://argos.inlevel9.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inlevel9-com/terminal-ticker-argos.git"
+  },
+  "keywords": [
+    "argos",
+    "stocks",
+    "finance",
+    "tui",
+    "terminal",
+    "cli",
+    "earnings",
+    "filings"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && chmod +x dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "ink": "^7.1.1",
+    "react": "^19.2.0",
+    "string-width": "^8.2.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19.2.0",
+    "tsx": "^4.23.0",
+    "typescript": "~6.0.3"
+  },
+  "bugs": {
+    "url": "https://github.com/inlevel9-com/terminal-ticker-argos/issues"
+  }
+}
