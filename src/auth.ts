@@ -1,4 +1,4 @@
-import { hostname } from 'node:os'
+import { arch, type as osType } from 'node:os'
 import { spawn } from 'node:child_process'
 import { api } from './api.js'
 import { API_URL, clearCredentials, loadCredentials, saveCredentials, type Lang } from './config.js'
@@ -23,7 +23,10 @@ export function openUrl(url: string): boolean {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export async function login(lang: Lang, log: (s: string) => void = (s) => process.stderr.write(`${s}\n`)): Promise<void> {
-  const deviceName = `argos-cli (${hostname()})`
+  // Shown on the approval page so you can tell which device is asking. The
+  // host name often contains the user's own name, so send only OS and CPU
+  // unless ARGOS_DEVICE_NAME says otherwise (data minimization).
+  const deviceName = process.env.ARGOS_DEVICE_NAME?.trim().slice(0, 60) || `argos-cli (${osType()} ${arch()})`
   const start = await api.deviceStart(deviceName)
   const ko = lang === 'ko'
   const url = start.verification_url_complete ?? start.verification_url
