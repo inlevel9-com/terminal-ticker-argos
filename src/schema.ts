@@ -9,6 +9,8 @@ export const DeviceStart = z.object({
   device_code: z.string(),
   user_code: z.string(),
   verification_url: z.string(),
+  // Approval page with the code filled in (RFC 8628). Older servers omit it.
+  verification_url_complete: z.string().optional(),
   expires_in: z.number(),
 })
 

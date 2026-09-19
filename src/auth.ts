@@ -3,30 +3,35 @@ import { spawn } from 'node:child_process'
 import { api } from './api.js'
 import { clearCredentials, loadCredentials, saveCredentials, type Lang } from './config.js'
 
-export function openUrl(url: string): void {
-  // Over SSH or with BROWSER=none there's no local browser to open; the URL is printed.
-  if (process.env.SSH_CONNECTION || process.env.BROWSER === 'none' || process.env.ARGOS_NO_BROWSER) return
+// Returns false when it didn't try (SSH, BROWSER=none); the caller prints the URL either way.
+export function openUrl(url: string): boolean {
+  if (process.env.SSH_CONNECTION || process.env.BROWSER === 'none' || process.env.ARGOS_NO_BROWSER) return false
   const cmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'cmd' : 'xdg-open'
   const args = process.platform === 'win32' ? ['/c', 'start', '', url] : [url]
   try {
     spawn(cmd, args, { stdio: 'ignore', detached: true }).on('error', () => {}).unref()
+    return true
   } catch {
-    // No browser available (SSH, CI): the URL is printed anyway.
+    return false
   }
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export async function login(lang: Lang, log: (s: string) => void = (s) => process.stderr.write(`${s}\n`)): Promise<void> {
-  const start = await api.deviceStart()
+  const deviceName = `argos-cli (${hostname()})`
+  const start = await api.deviceStart(deviceName)
   const ko = lang === 'ko'
-  log(ko ? `\n  브라우저에서 아래 코드를 입력해 이 기기를 연결하세요.\n` : `\n  Enter this code in your browser to link this device.\n`)
+  const url = start.verification_url_complete ?? start.verification_url
+  const opened = openUrl(url)
+  log(ko
+    ? `\n  ${opened ? '브라우저에서 ARGOS 승인 페이지를 열었습니다.' : '아래 주소를 브라우저에서 여세요.'} 코드가 같은지 확인하고 [승인]을 누르세요.\n`
+    : `\n  ${opened ? 'Opened the ARGOS approval page in your browser.' : 'Open this address in a browser.'} Check the code matches, then click Approve.\n`)
   log(`    ${start.user_code}\n`)
-  log(`  ${start.verification_url}\n`)
-  openUrl(start.verification_url)
+  log(`  ${url}\n`)
+  log(ko ? '  승인을 기다리는 중… (Ctrl+C로 취소)' : '  Waiting for approval… (Ctrl+C to cancel)')
 
   const deadline = Date.now() + start.expires_in * 1000
-  const deviceName = `argos-cli (${hostname()})`
   while (Date.now() < deadline) {
     await sleep(2500)
     let res

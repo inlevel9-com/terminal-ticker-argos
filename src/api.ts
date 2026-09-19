@@ -44,7 +44,8 @@ async function request<T extends z.ZodType>(schema: T, path: string, opts: Optio
 }
 
 export const api = {
-  deviceStart: () => request(S.DeviceStart, '/api/mac/device/start', { method: 'POST' }),
+  deviceStart: (device_name: string) =>
+    request(S.DeviceStart, '/api/mac/device/start', { method: 'POST', body: { client: 'cli', device_name } }),
   devicePoll: (device_code: string, device_name: string) =>
     request(S.DevicePoll, '/api/mac/device/poll', { method: 'POST', body: { device_code, device_name } }),
   revoke: (token: string) => request(S.WatchlistChange.partial(), '/api/mac/token/revoke', { method: 'POST', token }),
